@@ -1,6 +1,20 @@
-Следование различным гайдам не понятно что получится:
+# Следование различным гайдам, не понятно что получится.
 
-1. Установить QEMU
-2. запуск 
-    cargo build
-     qemu-system-x86_64 -device loader,file=target\x86_64-unknown-none\debug\my_os_project,cpu-num=0
+## Подготовка окружения
+
+1. Установить QEMU:
+   Убедитесь, что эмулятор QEMU установлен в системе и путь к нему добавлен в переменные среды (`PATH`). Проверить можно командой:
+
+    ```bash
+        qemu-system-x86_64 --version
+    ```
+
+2. Сборка
+
+    ```bash
+        cargo build
+    ```
+2. Запуск 
+    ```bash
+        qemu-system-x86_64 -device loader,file=target\x86_64-unknown-none\debug\my_os_project,cpu-num=0
+    ```
