@@ -1,0 +1,7 @@
+[build]
+# Говорим Cargo всегда собирать проект под "голое железо" x86_64
+target = "x86_64-unknown-none"
+
+[target.x86_64-unknown-none]
+# Говорим Cargo: при вводе команды `cargo run` запускай QEMU с нашим бинарником
+#runner = "qemu-system-x86_64 -kernel"
