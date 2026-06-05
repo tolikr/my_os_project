@@ -2,22 +2,8 @@
 
 ## Подготовка окружения
 
-1. Установить QEMU:
-   Убедитесь, что эмулятор QEMU установлен в системе и путь к нему добавлен в переменные среды (`PATH`). Проверить можно командой:
-
-    ```bash
-        qemu-system-x86_64 --version
-    ```
-
-2. Сборка
-
-    ```bash
-        cargo build
-    ```
-3. Запуск 
-    ```bash
-        qemu-system-x86_64 -device loader,file=target\x86_64-unknown-none\debug\my_os_project,cpu-num=0
-    ```
+1. Поставить wsl если на винде
+2. Дальше так https://jcomes.org/aarch64-os-hello_world
 
 
 ## Лицензия
