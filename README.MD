@@ -14,7 +14,12 @@
     ```bash
         cargo build
     ```
-2. Запуск 
+3. Запуск 
     ```bash
         qemu-system-x86_64 -device loader,file=target\x86_64-unknown-none\debug\my_os_project,cpu-num=0
     ```
+
+
+## Лицензия
+
+Проект распространяется под лицензией MIT. Подробнее см. в файле [LICENSE](LICENSE).
