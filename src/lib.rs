@@ -3,27 +3,17 @@
 
 use core::panic::PanicInfo;
 
-const UART: *mut u8 = 0x0900_0000 as *mut u8;
+mod uart;
+
+use uart::Uart;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn kmain() {
-    print(b"Hello, from Rust!\n");
-}
-
-fn putchar(c: u8) {
-    unsafe {
-        *UART = c;
-    }
-}
-
-fn print(s: &[u8]) {
-    for &c in s {
-        putchar(c);
-    }
+    Uart::print_ln("Hello, from Rust!");
 }
 
 #[panic_handler]
 fn panic(_: &PanicInfo) -> ! {
-    print(b"Panic!\n");
+    Uart::print_ln("Panic!");
     loop {}
 }
