@@ -1,15 +1,18 @@
 #![no_main]
 #![no_std]
 
-use core::panic::PanicInfo;
-
 mod uart;
 
+use core::panic::PanicInfo;
 use uart::Uart;
 
 #[unsafe(no_mangle)]
-pub extern "C" fn kmain() {
-    Uart::print_ln("Hello, from Rust!");
+pub extern "C" fn kmain(fdt_address: usize) {
+    Uart::print_ln("Kernel loaded!");
+    Uart::print_hex(fdt_address);
+
+    
+    Uart::print_str("--------------------------\n");
 }
 
 #[panic_handler]
