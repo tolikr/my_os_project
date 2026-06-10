@@ -1,10 +1,10 @@
 # Target architecture and toolchain
-TARGET := aarch64-unknown-none
-AS := aarch64-linux-gnu-as
-CC := aarch64-linux-gnu-gcc-14
+TARGET := riscv64gc-unknown-none-elf
+AS := riscv64-unknown-elf-as
+CC := riscv64-unknown-elf-gcc-14
 CFLAGS := -Wall -ggdb -ffreestanding -nostdlib -I./include
 LD := rust-lld
-QEMU := qemu-system-aarch64
+QEMU := qemu-system-riscv64
 VERSION := debug
 
 # File paths
@@ -21,7 +21,7 @@ KERNEL_OBJ := target/$(TARGET)/$(VERSION)/lib$(CRATE_NAME).a
 KERNEL_ELF := kernel.elf
 
 # QEMU options
-QEMU_FLAGS := -machine virt -cpu cortex-a57 -nographic -kernel $(KERNEL_ELF)
+QEMU_FLAGS := -machine virt -cpu max -nographic -kernel $(KERNEL_ELF)
 
 # Build the kernel
 all: $(KERNEL_ELF)
