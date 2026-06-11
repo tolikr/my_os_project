@@ -11,6 +11,8 @@ extern crate alloc; // Подключаем стандартный систем�
 #[global_allocator]
 static ALLOCATOR: heap::linked_list_allocator::LinkedListAllocator = heap::linked_list_allocator::LinkedListAllocator::new();
 
+const HEAP_PAGE_COUNT: usize = 256; // Задаем размер кучи в страницах
+
 // Импортируем метку из линкера
 unsafe extern "C" {
     static _end: u8;
@@ -28,11 +30,11 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
     // Выделяем первую страницу для кучи, чтобы узнать, где она начнется
     let heap_start = alloc_page();
     
-    // Выделяем еще, например, 255 страниц подряд для расширения кучи
-    for _ in 0..255 {
+    // Выделяем еще, например, HEAP_PAGE_COUNT страниц подряд для расширения кучи
+    for _ in 0..(HEAP_PAGE_COUNT - 1) {
         alloc_page();
     }
-    let heap_size = 256 * 4096; // 1 Мегабайт
+    let heap_size = HEAP_PAGE_COUNT * 4096;
 
     unsafe {
         // Инициализируем глобальный аллокатор Rust этим мегабайтом
