@@ -2,9 +2,14 @@
 #![no_std]
 
 mod uart;
+mod heap;
 
 use core::panic::PanicInfo;
 use uart::Uart;
+extern crate alloc; // Подключаем стандартный системный крейт кучи Rust
+
+#[global_allocator]
+static ALLOCATOR: heap::linked_list_allocator::LinkedListAllocator = heap::linked_list_allocator::LinkedListAllocator::new();
 
 // Импортируем метку из линкера
 unsafe extern "C" {
@@ -20,6 +25,32 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
     Uart::print_ln("Memory allocator initialized.");
     unsafe { Uart::print_hex(FREE_MEM_START);}
     
+    // Выделяем первую страницу для кучи, чтобы узнать, где она начнется
+    let heap_start = alloc_page();
+    
+    // Выделяем еще, например, 255 страниц подряд для расширения кучи
+    for _ in 0..255 {
+        alloc_page();
+    }
+    let heap_size = 256 * 4096; // 1 Мегабайт
+
+    unsafe {
+        // Инициализируем глобальный аллокатор Rust этим мегабайтом
+        ALLOCATOR.init(heap_start, heap_size);
+    }
+    Uart::print_ln("Global heap allocator initialized.");
+
+    // ПРОВЕРКА: Теперь у вас работает магия Rust!
+    use alloc::vec::Vec;
+    let mut v = Vec::new();
+    v.push(hart_id);
+    v.push(fdt_address);
+    
+    Uart::print_ln("Vec successfully allocated on RISC-V 64 heap!");
+
+    Uart::print_str("--------------------------\n");
+
+
     Uart::print_ln("Hart id.");
     Uart::print_hex(hart_id);
 
