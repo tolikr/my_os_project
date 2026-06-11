@@ -40,7 +40,7 @@ impl Uart {
 }
 
 // адрес порта для вывода
-const UART: *mut u8 = 0x0900_0000 as *mut u8;
+const UART: *mut u8 = 0x1000_0000 as *mut u8;
 
 fn putchar(c: u8) {
     unsafe {

@@ -1,7 +1,7 @@
 # Target architecture and toolchain
 TARGET := riscv64gc-unknown-none-elf
 AS := riscv64-unknown-elf-as
-CC := riscv64-unknown-elf-gcc-14
+CC := riscv64-unknown-elf-gcc
 CFLAGS := -Wall -ggdb -ffreestanding -nostdlib -I./include
 LD := rust-lld
 QEMU := qemu-system-riscv64
@@ -36,7 +36,7 @@ $(KERNEL_OBJ): $(KERNEL_RS)
 
 # Link the kernel object and boot object into an ELF
 $(KERNEL_ELF): $(BOOT_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
-	$(LD) -flavor gnu -o $(KERNEL_ELF) -T $(LINKER_SCRIPT) -o $@ $(BOOT_OBJ) $(KERNEL_OBJ)
+	$(CC) -nostdlib -no-pie -T $(LINKER_SCRIPT) -o $@ $(BOOT_OBJ) $(KERNEL_OBJ)
 
 # Run the kernel with QEMU
 run: $(KERNEL_ELF)
