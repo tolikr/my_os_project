@@ -12,6 +12,7 @@ extern crate alloc; // Подключаем стандартный систем�
 static ALLOCATOR: heap::linked_list_allocator::LinkedListAllocator = heap::linked_list_allocator::LinkedListAllocator::new();
 
 const HEAP_PAGE_COUNT: usize = 256; // Задаем размер кучи в страницах
+pub const PAGE_SIZE: usize = 4096;
 
 // Импортируем метку из линкера
 unsafe extern "C" {
@@ -34,7 +35,7 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
     for _ in 0..(HEAP_PAGE_COUNT - 1) {
         alloc_page();
     }
-    let heap_size = HEAP_PAGE_COUNT * 4096;
+    let heap_size = HEAP_PAGE_COUNT * PAGE_SIZE;
 
     unsafe {
         // Инициализируем глобальный аллокатор Rust этим мегабайтом
@@ -78,12 +79,12 @@ pub fn init_page_allocator() {
     }
 }
 
-// Функция выделения ОДНОЙ физической страницы (4096 байт)
+// Функция выделения ОДНОЙ физической страницы (PAGE_SIZE байт)
 pub fn alloc_page() -> usize {
     unsafe {
         let page_address = FREE_MEM_START;
-        // Сдвигаем указатель на 4 КБ вперед для следующего вызова
-        FREE_MEM_START += 4096; 
+        // Сдвигаем указатель на PAGE_SIZE Байт вперед для следующего вызова
+        FREE_MEM_START += PAGE_SIZE; 
         
         // Обязательно очищаем страницу нулями, чтобы там не было мусора
         let ptr = page_address as *mut u64;
