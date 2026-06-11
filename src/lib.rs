@@ -35,7 +35,9 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
     Uart::print_ln("Hart id.");
     Uart::print_hex(hart_id);
 
+    Uart::print_ln("Fdt id.");
     Uart::print_hex(fdt_address);
+    Uart::print_ln("");
 
     
     Uart::print_str("--------------------------\n");
