@@ -1,5 +1,6 @@
 use core::ops::{Deref, DerefMut};
 use crate::memory::ENTRY_COUNT;
+use crate::memory::PAGE_SIZE;
 
 // Битовые флаги для RISC-V PTE
 pub const PTE_VALID: u64 = 1 << 0;
@@ -47,4 +48,87 @@ impl PageTableEntry {
 #[repr(C, align(4096))]
 pub struct PageTable {
     pub entries: [PageTableEntry; ENTRY_COUNT],
+}
+
+impl PageTable {
+    /// Находит или создает запись (PTE) для конкретного виртуального адреса на уровне L0
+    pub fn walk_mut(&mut self, va: usize) -> Option<&mut PageTableEntry> {
+        // --- УРОВЕНЬ 2 (Корень) ---
+        let idx2 = lv2_index(va);
+        let pte2 = &mut self.entries[idx2];
+        
+        let mut table1_addr = if pte2.is_valid() {
+            pte2.get_physical_address()
+        } else {
+            // Если таблицы L1 еще нет — выделяем её через наш постраничный аллокатор!
+            let new_page = crate::memory::page::alloc_page();
+            if new_page == 0 { return None; } // На случай, если память совсем кончилась
+            
+            // Связываем L2 с новой таблицей L1 (флаг VALID, но без R/W/X, так как это ветка)
+            let ppn = (new_page >> 12) as u64;
+            *pte2 = PageTableEntry::new(ppn, PTE_VALID);
+            new_page
+        };
+
+        // --- УРОВЕНЬ 1 (Середина) ---
+        let table1 = unsafe { &mut *(table1_addr as *mut PageTable) };
+        let idx1 = lv1_index(va);
+        let pte1 = &mut table1.entries[idx1];
+
+        let table0_addr = if pte1.is_valid() {
+            pte1.get_physical_address()
+        } else {
+            // Если таблицы L0 еще нет — выделяем её
+            let new_page = crate::memory::page::alloc_page();
+            if new_page == 0 { return None; }
+            
+            let ppn = (new_page >> 12) as u64;
+            *pte1 = PageTableEntry::new(ppn, PTE_VALID);
+            new_page
+        };
+
+        // --- УРОВЕНЬ 0 (Лист) ---
+        let table0 = unsafe { &mut *(table0_addr as *mut PageTable) };
+        let idx0 = lv0_index(va);
+        
+        // Возвращаем прямую ссылку на финальную запись, которую мы теперь можем модифицировать
+        Some(&mut table0.entries[idx0])
+    }
+
+    /// Отображает виртуальную страницу на физическую с заданными флагами
+    pub fn map_page(&mut self, va: usize, pa: usize, flags: u64) -> Result<(), &'static str> {
+        // Проверяем, что адреса ровно выровнены по границе страницы
+        if (va % PAGE_SIZE) != 0 || (pa % PAGE_SIZE) != 0 {
+            return Err("Addresses must be page-aligned!");
+        }
+
+        // Ищем финальную запись в таблице L0
+        if let Some(pte) = self.walk_mut(va) {
+            if pte.is_valid() {
+                return Err("Virtual address is already mapped!");
+            }
+            
+            // Прописываем физический адрес (PPN) и флаги (обязательно добавляем PTE_VALID)
+            let ppn = (pa >> 12) as u64;
+            *pte = PageTableEntry::new(ppn, flags | PTE_VALID);
+            Ok(())
+        } else {
+            Err("Out of memory while allocating page tables!")
+        }
+    }
+}
+
+/// Извлекает индекс для корневой таблицы L2 (биты 38-30)
+fn lv2_index(va: usize) -> usize {
+    (va >> 30) & 0x1FF
+}
+
+/// Извлекает индекс для промежуточной таблицы L1 (биты 29-21)
+fn lv1_index(va: usize) -> usize {
+    (va >> 21) & 0x1FF
+}
+
+/// Извлекает индекс для финальной таблицы L0 (биты 20-12)
+fn lv0_index(va: usize) -> usize {
+    (va >> 12) & 0x1FF
 }
