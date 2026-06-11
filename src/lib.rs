@@ -1,12 +1,13 @@
 #![no_main]
 #![no_std]
 
+extern crate alloc; // Подключаем стандартный системный крейт кучи Rust
+
 mod uart;
 mod memory;
 
 use core::panic::PanicInfo;
 use uart::Uart;
-extern crate alloc; // Подключаем стандартный системный крейт кучи Rust
 
 #[global_allocator]
 static ALLOCATOR: memory::heap::LinkedListAllocator = memory::heap::LinkedListAllocator::new();
