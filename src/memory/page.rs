@@ -1,5 +1,6 @@
 // Наша новая красивая константа размера страницы
 pub const PAGE_SIZE: usize = 4096;
+pub const ENTRY_COUNT: usize = PAGE_SIZE / core::mem::size_of::<u64>();
 
 // Импортируем метку конца ядра из линкера
 unsafe extern "C" {
@@ -26,7 +27,7 @@ pub fn alloc_page() -> usize {
         
         // Обязательно очищаем страницу нулями, чтобы там не было мусора
         let ptr = page_address as *mut u64;
-        for i in 0..512 {
+        for i in 0..ENTRY_COUNT {
             ptr.add(i).write_volatile(0);
         }
         

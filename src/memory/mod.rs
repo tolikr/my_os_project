@@ -1,8 +1,10 @@
 pub mod page;
 pub mod heap;
+pub mod mmu;
 
 // Выносим константу размера страницы на уровень выше для удобства
 pub use page::PAGE_SIZE;
+pub use page::ENTRY_COUNT;
 
 // Сюда же можно перенести глобальную константу размера кучи
 pub const HEAP_PAGE_COUNT: usize = 256; 
