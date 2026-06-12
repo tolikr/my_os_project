@@ -10,7 +10,7 @@ pub use page::ENTRY_COUNT;
 pub const HEAP_PAGE_COUNT: usize = 256; 
 
 /// Высокоуровневая функция инициализации ВСЕЙ памяти ядра
-pub fn init() {
+pub fn init(ram_start: usize, ram_size: usize) {
     // 1. Запускаем постраничный аллокатор
     page::init_page_allocator();
     
@@ -26,9 +26,6 @@ pub fn init() {
         crate::ALLOCATOR.init(heap_start, heap_size);
     }
     
-}
-
-pub fn init_mmu(ram_start: usize, ram_size: usize) {
     // 3. НОВИНКА: Запускаем MMU и переходим в виртуальную память!
     mmu::init_mmu(ram_start, ram_size);
 }

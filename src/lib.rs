@@ -16,26 +16,12 @@ static ALLOCATOR: memory::heap::LinkedListAllocator = memory::heap::LinkedListAl
 pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
     Uart::print_ln("Kernel loaded.");
 
-    memory::init();
-
-    Uart::print_ln("Memory subsystem fully initialized (Pages + Heap).");
-
-    // ПРОВЕРКА: Теперь у вас работает магия Rust!
-    use alloc::vec::Vec;
-    let mut v = Vec::new();
-    v.push(hart_id);
-    v.push(fdt_address);
-
-    Uart::print_ln("Vec successfully allocated on RISC-V 64 heap!");
-
-    Uart::print_str("--------------------------\n");
-
-    Uart::print_ln("Hart id.");
-    Uart::print_hex(hart_id);
-
-    Uart::print_ln("Fdt id.");
-    Uart::print_hex(fdt_address);
     Uart::print_ln("");
+
+    // Переменные для хранения параметров RAM (значения по умолчанию на случай сбоя FDT)
+    let ram_start_offset: usize = 0x0020_0000;
+    let mut ram_start: usize = 0x8000_0000;
+    let mut ram_size: usize = 0x0800_0000; // 128 MB
 
     // 2. Инициализируем парсер FDT по указателю, который нам дал QEMU
     unsafe {
@@ -56,6 +42,8 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
                     Uart::print_hex(region.starting_address as usize);
                     Uart::print_str("    Size: ");
                     Uart::print_hex(region.size.unwrap_or(0) as usize);
+                    ram_start = region.starting_address as usize;
+                    ram_size = region.size.unwrap_or(ram_size);
                 }
 
                 // Посчитаем количество ядер процессора (Harts)
@@ -74,9 +62,16 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
     Uart::print_ln("");
     Uart::print_ln("--------------------------");
     
-    memory::init();
+    // Сдвинем на оффсет если память покажет на небезопасный регион
+    ram_start += ram_start_offset;
+    ram_size -= ram_start_offset;
+    
+    memory::init(ram_start, ram_size);
+    
+    Uart::print_ln("Memory subsystem initialized (Pages + Heap).");
 
     // ПРОВЕРКА: Теперь у вас работает трансляция памяти!
+    use alloc::vec::Vec;
     let mut v = Vec::new();
     v.push(hart_id);
     v.push(fdt_address);

@@ -1,13 +1,14 @@
-use core::ops::{Deref, DerefMut};
 use crate::memory::ENTRY_COUNT;
 use crate::memory::PAGE_SIZE;
+use crate::uart::Uart;
+use core::ops::{Deref, DerefMut};
 
 // Битовые флаги для RISC-V PTE
 pub const PTE_VALID: u64 = 1 << 0;
-pub const PTE_READ: u64  = 1 << 1;
+pub const PTE_READ: u64 = 1 << 1;
 pub const PTE_WRITE: u64 = 1 << 2;
-pub const PTE_EXEC: u64  = 1 << 3;
-pub const PTE_USER: u64  = 1 << 4;
+pub const PTE_EXEC: u64 = 1 << 3;
+pub const PTE_USER: u64 = 1 << 4;
 pub const PTE_GLOBAL: u64 = 1 << 5;
 pub const PTE_ACCESSED: u64 = 1 << 6;
 pub const PTE_DIRTY: u64 = 1 << 7;
@@ -37,13 +38,13 @@ impl PageTableEntry {
         // Извлекаем физический адрес (номер страницы) обратно
         (self.0 >> 10) & 0x003F_FFFF_FFFF_FFFF
     }
-    
+
     pub fn get_physical_address(&self) -> usize {
         (self.get_ppn() << 12) as usize
     }
 }
 
-// Сама таблица страниц — это просто массив из ENTRY_COUNT записей, 
+// Сама таблица страниц — это просто массив из ENTRY_COUNT записей,
 // занимающий ровно одну страницу (4096 байт)
 #[repr(C, align(4096))]
 pub struct PageTable {
@@ -57,20 +58,22 @@ impl PageTable {
             self.entries[i] = PageTableEntry::new(0, 0);
         }
     }
-    
+
     /// Находит или создает запись (PTE) для конкретного виртуального адреса на уровне L0
     pub fn walk_mut(&mut self, va: usize) -> Option<&mut PageTableEntry> {
         // --- УРОВЕНЬ 2 (Корень) ---
         let idx2 = lv2_index(va);
         let pte2 = &mut self.entries[idx2];
-        
+
         let mut table1_addr = if pte2.is_valid() {
             pte2.get_physical_address()
         } else {
             // Если таблицы L1 еще нет — выделяем её через наш постраничный аллокатор!
             let new_page = crate::memory::page::alloc_page();
-            if new_page == 0 { return None; } // На случай, если память совсем кончилась
-            
+            if new_page == 0 {
+                return None;
+            } // На случай, если память совсем кончилась
+
             // Связываем L2 с новой таблицей L1 (флаг VALID, но без R/W/X, так как это ветка)
             let ppn = (new_page >> 12) as u64;
             *pte2 = PageTableEntry::new(ppn, PTE_VALID);
@@ -87,8 +90,10 @@ impl PageTable {
         } else {
             // Если таблицы L0 еще нет — выделяем её
             let new_page = crate::memory::page::alloc_page();
-            if new_page == 0 { return None; }
-            
+            if new_page == 0 {
+                return None;
+            }
+
             let ppn = (new_page >> 12) as u64;
             *pte1 = PageTableEntry::new(ppn, PTE_VALID);
             new_page
@@ -97,7 +102,7 @@ impl PageTable {
         // --- УРОВЕНЬ 0 (Лист) ---
         let table0 = unsafe { &mut *(table0_addr as *mut PageTable) };
         let idx0 = lv0_index(va);
-        
+
         // Возвращаем прямую ссылку на финальную запись, которую мы теперь можем модифицировать
         Some(&mut table0.entries[idx0])
     }
@@ -114,7 +119,7 @@ impl PageTable {
             if pte.is_valid() {
                 return Err("Virtual address is already mapped!");
             }
-            
+
             // Прописываем физический адрес (PPN) и флаги (обязательно добавляем PTE_VALID)
             let ppn = (pa >> 12) as u64;
             *pte = PageTableEntry::new(ppn, flags | PTE_VALID);
@@ -170,9 +175,17 @@ pub fn init_mmu(ram_start: usize, ram_size: usize) {
             current_addr += PAGE_SIZE;
         }
 
+        // Мапим UART (0x1000_0000) сам на себя.
+        // Флаги: VALID | READ | WRITE. Флаг EXECUTE (X) для периферии ставить НЕЛЬЗЯ.
+        if let Err(err) =
+            (*KERNEL_ROOT_PAGE_TABLE).map_page(0x1000_0000, 0x1000_0000, PTE_READ | PTE_WRITE)
+        {
+            panic!("Failed to map UART: {}", err);
+        }
+
         // 3. Включаем MMU! Скармливаем таблицу регистру satp
         let root_ppn = (root_page >> 12) as u64;
-        
+
         // Режим Sv39 в регистре satp кодируется числом 8 в старших 4 битах (63:60)
         let satp_mode = 8u64 << 60;
         let satp_val = satp_mode | root_ppn;
