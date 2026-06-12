@@ -25,4 +25,10 @@ pub fn init() {
     unsafe {
         crate::ALLOCATOR.init(heap_start, heap_size);
     }
+    
+}
+
+pub fn init_mmu(ram_start: usize, ram_size: usize) {
+    // 3. НОВИНКА: Запускаем MMU и переходим в виртуальную память!
+    mmu::init_mmu(ram_start, ram_size);
 }

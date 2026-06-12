@@ -73,6 +73,15 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
 
     Uart::print_ln("");
     Uart::print_ln("--------------------------");
+    
+    memory::init();
+
+    // ПРОВЕРКА: Теперь у вас работает трансляция памяти!
+    let mut v = Vec::new();
+    v.push(hart_id);
+    v.push(fdt_address);
+
+    Uart::print_ln("Vec successfully allocated on translated memory!");
 }
 
 #[panic_handler]
