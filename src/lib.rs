@@ -4,6 +4,7 @@
 extern crate alloc; // Подключаем стандартный системный крейт кучи Rust
 
 mod memory;
+mod trap;
 mod uart;
 
 use core::panic::PanicInfo;
@@ -61,13 +62,13 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
 
     Uart::print_ln("");
     Uart::print_ln("--------------------------");
-    
+
     // Сдвинем на оффсет если память покажет на небезопасный регион
     ram_start += ram_start_offset;
     ram_size -= ram_start_offset;
-    
+
     memory::init(ram_start, ram_size);
-    
+
     Uart::print_ln("Memory subsystem initialized (Pages + Heap).");
 
     // ПРОВЕРКА: Теперь у вас работает трансляция памяти!
@@ -77,6 +78,20 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
     v.push(fdt_address);
 
     Uart::print_ln("Vec successfully allocated on translated memory!");
+
+    // Инициализируем прерывания!
+    trap::init_traps();
+
+    Uart::print_ln("Traps initialized. We are bulletproof now!");
+
+    // Проверим, ловит ли наш ассемблер ошибки?
+    // Намеренно читаем из запрещенного адреса (0x0), чтобы вызвать Page Fault:
+    unsafe {
+        // Раскомментируем и пишем через volatile, чтобы Rust не соптимизировал это чтение
+        let _trash = core::ptr::read_volatile(0x0 as *const u64);
+    }
+    // Если мы увидим эту строчку — значит прерывания НЕ сработали
+    Uart::print_ln("Uh oh... We survived? That's bad, MMU or Traps are broken.");
 }
 
 #[panic_handler]
