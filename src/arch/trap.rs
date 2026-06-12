@@ -9,6 +9,7 @@ pub struct TrapFrame {
 }
 
 use crate::uart::Uart;
+use crate::arch::timer;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_trap_handler(frame: &mut TrapFrame) {
@@ -27,7 +28,7 @@ pub extern "C" fn rust_trap_handler(frame: &mut TrapFrame) {
             5 => {
                 // Аппаратный таймер (Timer Interrupt)
                 // Сюда мы будем приходить каждые несколько миллисекунд
-                //timer_handler();
+                timer::handle_timer_interrupt();
             }
             9 => {
                 // Внешнее прерывание (External Interrupt - UART, Диск и т.д.)
@@ -38,10 +39,13 @@ pub extern "C" fn rust_trap_handler(frame: &mut TrapFrame) {
             }
         }
     } else {
-        // Если это ошибка (Page Fault, Illegal Instruction)
-        // Если упало само ЯДРО — то это жесткая паника (как сейчас)
-        // If упала программа пользователя — мы просто убиваем эту программу, но ядро живет!
-        Uart::print_str("Exception happened! Halted.\n");
+        // Если это критическая ошибка (как наш прошлый Page Fault) — зависаем
+        Uart::print_str("\n🎄 [OS Exception] 🎄\n");
+        Uart::print_str("Reason Code: ");
+        Uart::print_hex(code);
+        Uart::print_str("\nInstruction Pointer (sepc): ");
+        Uart::print_hex(frame.sepc);
+        Uart::print_ln("\nSystem halted.");
         loop {}
     }
 }

@@ -3,8 +3,8 @@
 
 extern crate alloc; // Подключаем стандартный системный крейт кучи Rust
 
+mod arch;
 mod memory;
-mod trap;
 mod uart;
 
 use core::panic::PanicInfo;
@@ -80,18 +80,28 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
     Uart::print_ln("Vec successfully allocated on translated memory!");
 
     // Инициализируем прерывания!
-    trap::init_traps();
+    arch::trap::init_traps();
 
     Uart::print_ln("Traps initialized. We are bulletproof now!");
-
     // Проверим, ловит ли наш ассемблер ошибки?
     // Намеренно читаем из запрещенного адреса (0x0), чтобы вызвать Page Fault:
-    unsafe {
-        // Раскомментируем и пишем через volatile, чтобы Rust не соптимизировал это чтение
-        let _trash = core::ptr::read_volatile(0x0 as *const u64);
+    // unsafe {
+    //     // Раскомментируем и пишем через volatile, чтобы Rust не соптимизировал это чтение
+    //     let _trash = core::ptr::read_volatile(0x0 as *const u64);
+    // }
+
+    // 2. Заводим и активируем системный таймер!
+    arch::timer::init_timer();
+    Uart::print_ln("Timer initialized. Core heartbeat started.");
+
+    // Уходим в вечный цикл. Без прерываний ядро бы застыло тут навечно.
+    loop {
+        // Можем добавить ленивую ассемблерную команду wfi (Wait For Interrupt),
+        // чтобы процессор засыпал до следующего тика таймера и не грел воздух в QEMU.
+        unsafe {
+            core::arch::asm!("wfi");
+        }
     }
-    // Если мы увидим эту строчку — значит прерывания НЕ сработали
-    Uart::print_ln("Uh oh... We survived? That's bad, MMU or Traps are broken.");
 }
 
 #[panic_handler]
