@@ -23,7 +23,7 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
     Uart::print_ln("");
 
     // Переменные для хранения параметров RAM (значения по умолчанию на случай сбоя FDT)
-    let ram_start_offset: usize = 0x0020_0000;
+    let osbi_offset: usize = 0x0020_0000;
     let mut ram_start: usize = 0x8000_0000;
     let mut ram_size: usize = 0x0800_0000; // 128 MB
 
@@ -67,8 +67,8 @@ pub extern "C" fn kmain(hart_id: usize, fdt_address: usize) {
     Uart::print_ln("--------------------------");
 
     // Сдвинем на оффсет если память покажет на небезопасный регион
-    ram_start += ram_start_offset;
-    ram_size -= ram_start_offset;
+    ram_start += osbi_offset;
+    ram_size -= osbi_offset;
 
     memory::init(ram_start, ram_size);
 
